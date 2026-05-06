@@ -3,164 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>곡선중학교 전문 출결 관리 시스템</title>
+    <title>곡선중 출결 스마트 관리</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; letter-spacing: -0.02em; }
-        .attendance-card { transition: all 0.2s ease; }
-        /* 미인정 누적 횟수별 테마 */
-        .level-low { background-color: #ffffff; border-color: #e2e8f0; }
-        .level-warning { background-color: #fff7ed; border: 2px solid #fb923c !important; } /* 3회 이상: 주황 */
-        .level-danger { background-color: #fef2f2; border: 2px solid #ef4444 !important; }  /* 5회 이상: 빨강 */
-        .level-critical { background-color: #450a0a; border: 2px solid #000000 !important; color: white !important; } /* 9회 이상: 검정/진홍 */
-        .level-critical .sub-text { color: #fca5a5 !important; }
         
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        /* 미인정 누적 횟수별 테마 (5. 요청하신 단계별 색상 적용) */
+        .level-low { border: 1px solid #e2e8f0; }
+        .level-warning { background-color: #fff7ed; border: 2.5px solid #fb923c !important; } /* 3회 이상 주황 */
+        .level-danger { background-color: #fef2f2; border: 2.5px solid #ef4444 !important; }  /* 5회 이상 빨강 */
+        .level-critical { background-color: #450a0a; border: 2.5px solid #000000 !important; color: white !important; } /* 9회 이상 검정 */
+        .level-critical p { color: #fca5a5 !important; }
+
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
-<body class="bg-slate-100 pb-28 text-slate-900">
+<body class="bg-slate-50 pb-28 text-slate-900">
 
-    <header class="bg-indigo-800 text-white p-6 sticky top-0 z-50 shadow-lg">
+    <header class="bg-indigo-700 text-white p-6 sticky top-0 z-50 shadow-md">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-xl font-black italic">곡선중 ATTENDANCE</h1>
-                <input type="date" id="currentDate" onchange="initDay()" class="bg-transparent text-sm font-bold outline-none border-none">
+                <h1 class="text-xl font-black tracking-tight">곡선중 출결관리</h1>
+                <input type="date" id="currentDate" onchange="render()" class="bg-transparent text-sm font-bold border-none outline-none cursor-pointer">
             </div>
-            <button onclick="toggleModal('setupModal', true)" class="bg-white/10 p-2 rounded-lg text-xs font-bold border border-white/20">명단설정</button>
+            <button onclick="toggleModal('setupModal', true)" class="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-bold border border-white/30">명단/복붙</button>
         </div>
     </header>
 
-    <main class="max-w-md mx-auto p-4 space-y-4">
-        <!-- 탭 1: 오늘 출결 체크 -->
+    <main class="max-w-md mx-auto p-4 space-y-6">
+        <!-- 탭 1: 체크 리스트 -->
         <div id="tab1" class="tab-content active space-y-3">
-            <div class="flex justify-between items-center px-1">
-                <h2 class="font-black text-slate-700">오늘의 출결 현황</h2>
-                <span id="statsSummary" class="text-[10px] font-bold bg-slate-200 px-2 py-1 rounded-md text-slate-600"></span>
-            </div>
             <div id="dailyList" class="space-y-3"></div>
         </div>
 
-        <!-- 탭 2: 누적 통계 리포트 -->
+        <!-- 탭 2: 전체 로그 및 수정/삭제 -->
         <div id="tab2" class="tab-content space-y-4">
-            <div class="bg-white p-6 rounded-[2rem] shadow-sm text-center">
-                <h2 class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">Cumulative Status</h2>
-                <div class="grid grid-cols-3 gap-2">
-                    <div class="bg-slate-50 p-3 rounded-2xl"><p class="text-[10px] text-slate-400 font-bold">전체 미인정</p><p id="totalUnpaid" class="text-lg font-black text-rose-600">0</p></div>
-                    <div class="bg-slate-50 p-3 rounded-2xl"><p class="text-[10px] text-slate-400 font-bold">전체 질병</p><p id="totalSickness" class="text-lg font-black text-amber-600">0</p></div>
-                    <div class="bg-slate-50 p-3 rounded-2xl"><p class="text-[10px] text-slate-400 font-bold">전체 인정</p><p id="totalApproved" class="text-lg font-black text-emerald-600">0</p></div>
-                </div>
-            </div>
-            <div id="cumulativeList" class="space-y-2"></div>
-        </div>
-
-        <!-- 탭 3: 증빙 서류 및 로그 -->
-        <div id="tab3" class="tab-content space-y-3">
-            <div class="flex justify-between items-center px-2">
-                <h2 class="font-bold text-slate-700">전체 출결 로그</h2>
-                <button onclick="exportCSV()" class="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-md">데이터 내보내기</button>
+            <div class="flex justify-between items-center px-1">
+                <h2 class="font-bold text-slate-700">전체 기록 (수정 가능)</h2>
+                <button onclick="exportCSV()" class="text-[10px] font-bold text-indigo-600 border border-indigo-200 px-3 py-1 rounded-lg bg-white">CSV 내보내기</button>
             </div>
             <div id="allLogs" class="space-y-3"></div>
         </div>
     </main>
 
-    <!-- [출결 입력 모달] -->
-    <div id="attModal" class="modal">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div class="text-center">
-                <h2 id="attModalTitle" class="font-black text-2xl text-slate-800"></h2>
-                <p class="text-xs text-slate-400 font-bold mt-1">출결 사유를 선택하세요</p>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="space-y-2">
-                    <p class="text-[10px] font-black text-rose-500 ml-1">UNPAID (미인정)</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="recordAtt('미인정 결석')" class="py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs border border-rose-100">결석</button>
-                        <button onclick="recordAtt('미인정 지각')" class="py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs border border-rose-100">지각</button>
-                        <button onclick="recordAtt('미인정 조퇴')" class="py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs border border-rose-100">조퇴</button>
-                        <button onclick="recordAtt('미인정 결과')" class="py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs border border-rose-100">결과</button>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <p class="text-[10px] font-black text-amber-500 ml-1">SICKNESS (질병)</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="recordAtt('질병 결석')" class="py-3 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs border border-amber-100">결석</button>
-                        <button onclick="recordAtt('질병 지각')" class="py-3 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs border border-amber-100">지각</button>
-                        <button onclick="recordAtt('질병 조퇴')" class="py-3 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs border border-amber-100">조퇴</button>
-                        <button onclick="recordAtt('질병 결과')" class="py-3 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs border border-amber-100">결과</button>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <p class="text-[10px] font-black text-emerald-500 ml-1">APPROVED (공결/인정)</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="recordAtt('인정 결석')" class="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs border border-emerald-100">결석</button>
-                        <button onclick="recordAtt('인정 지각')" class="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs border border-emerald-100">지각</button>
-                        <button onclick="recordAtt('인정 조퇴')" class="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs border border-emerald-100">조퇴</button>
-                        <button onclick="recordAtt('인정 결과')" class="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs border border-emerald-100">결과</button>
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t">
-                    <p class="text-[10px] font-black text-slate-400 mb-2">특이사항 및 증빙자료</p>
-                    <textarea id="noteText" class="w-full bg-slate-100 rounded-xl p-3 text-sm outline-none mb-2" placeholder="사유 또는 증빙 서류 확인 정보 (예: OO병원 진료확인서 제출 완료)"></textarea>
-                    <div class="flex items-center gap-2">
-                        <input type="file" id="photoFile" accept="image/*" class="hidden" onchange="handleFile(this)">
-                        <button onclick="document.getElementById('photoFile').click()" class="flex-1 bg-slate-800 text-white py-4 rounded-xl font-bold text-xs"><i class="fas fa-camera mr-2"></i>증빙 사진 첨부</button>
-                    </div>
-                    <div id="filePreview" class="mt-2 text-[10px] text-indigo-600 font-bold"></div>
-                </div>
-            </div>
-            
-            <button onclick="toggleModal('attModal', false)" class="w-full py-2 text-slate-400 text-xs font-bold mt-2 text-center">입력 취소</button>
-        </div>
-    </div>
-
-    <!-- 명단 설정 모달 -->
+    <!-- [명단 관리 모달] - 파일/표 복붙 최적화 -->
     <div id="setupModal" class="modal">
-        <div class="bg-white rounded-[2rem] p-8 w-full max-w-sm space-y-4 shadow-2xl text-center">
-            <h2 class="font-black text-xl">학생 명단 관리</h2>
-            <textarea id="rawList" class="w-full h-40 bg-slate-50 rounded-xl p-4 text-xs outline-none" placeholder="번호 성명 (예: 30201 홍길동)"></textarea>
-            <div class="flex gap-2">
-                <button onclick="importStudents()" class="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-bold">적용</button>
-                <button onclick="localStorage.clear(); location.reload();" class="flex-1 bg-rose-50 text-rose-500 py-4 rounded-xl font-bold text-xs text-center">초기화</button>
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-5 shadow-2xl">
+            <div class="text-center">
+                <h2 class="font-black text-xl text-slate-800">명단 복사 붙여넣기</h2>
+                <p class="text-[10px] text-slate-400 mt-1">엑셀이나 한글 표의 내용을 그대로 붙여넣으세요.</p>
             </div>
-            <button onclick="toggleModal('setupModal', false)" class="text-slate-300 text-xs">닫기</button>
+            <textarea id="rawList" class="w-full h-48 bg-slate-50 border-0 rounded-2xl p-5 text-xs outline-none shadow-inner" placeholder="예: 30201 강민준&#10;30202 김영희..."></textarea>
+            <div class="flex gap-2">
+                <button onclick="importStudents()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg">명단 적용</button>
+                <button onclick="if(confirm('모든 데이터가 삭제됩니다.')){localStorage.clear(); location.reload();}" class="flex-1 bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold text-xs">전체 초기화</button>
+            </div>
+            <button onclick="toggleModal('setupModal', false)" class="w-full text-slate-400 text-[10px] py-1 text-center">닫기</button>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t flex justify-around p-5 shadow-2xl z-50">
-        <button onclick="switchTab(1)" class="nav-btn text-indigo-600 flex flex-col items-center"><i class="fas fa-calendar-check text-xl"></i><span class="text-[9px] font-bold mt-1">오늘출결</span></button>
-        <button onclick="switchTab(2)" class="nav-btn text-slate-300 flex flex-col items-center"><i class="fas fa-chart-line text-xl"></i><span class="text-[9px] font-bold mt-1">누적기록</span></button>
-        <button onclick="switchTab(3)" class="nav-btn text-slate-300 flex flex-col items-center"><i class="fas fa-file-invoice text-xl"></i><span class="text-[9px] font-bold mt-1">상세로그</span></button>
+    <!-- [출결 기록 모달] -->
+    <div id="attModal" class="modal">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-4 shadow-2xl overflow-y-auto max-h-[85vh]">
+            <h2 id="attModalTitle" class="font-black text-2xl text-center text-indigo-600"></h2>
+            <div class="grid grid-cols-1 gap-2">
+                <!-- 미인정 그룹 -->
+                <div class="grid grid-cols-2 gap-2 p-2 bg-rose-50 rounded-2xl">
+                    <button onclick="recordAtt('미인정 결석')" class="py-3 bg-white text-rose-600 rounded-xl font-bold text-xs shadow-sm">미인정 결석</button>
+                    <button onclick="recordAtt('미인정 지각')" class="py-3 bg-white text-rose-600 rounded-xl font-bold text-xs shadow-sm">미인정 지각</button>
+                    <button onclick="recordAtt('미인정 조퇴')" class="py-3 bg-white text-rose-600 rounded-xl font-bold text-xs shadow-sm">미인정 조퇴</button>
+                    <button onclick="recordAtt('미인정 결과')" class="py-3 bg-white text-rose-600 rounded-xl font-bold text-xs shadow-sm">미인정 결과</button>
+                </div>
+                <!-- 질병 그룹 -->
+                <div class="grid grid-cols-2 gap-2 p-2 bg-amber-50 rounded-2xl">
+                    <button onclick="recordAtt('질병 결석')" class="py-3 bg-white text-amber-600 rounded-xl font-bold text-xs shadow-sm">질병 결석</button>
+                    <button onclick="recordAtt('질병 지각')" class="py-3 bg-white text-amber-600 rounded-xl font-bold text-xs shadow-sm">질병 지각</button>
+                    <button onclick="recordAtt('질병 조퇴')" class="py-3 bg-white text-amber-600 rounded-xl font-bold text-xs shadow-sm">질병 조퇴</button>
+                    <button onclick="recordAtt('질병 결과')" class="py-3 bg-white text-amber-600 rounded-xl font-bold text-xs shadow-sm">질병 결과</button>
+                </div>
+                <!-- 인정 그룹 -->
+                <div class="grid grid-cols-2 gap-2 p-2 bg-emerald-50 rounded-2xl">
+                    <button onclick="recordAtt('인정 결석')" class="py-3 bg-white text-emerald-600 rounded-xl font-bold text-xs shadow-sm">인정 결석</button>
+                    <button onclick="recordAtt('인정 지각')" class="py-3 bg-white text-emerald-600 rounded-xl font-bold text-xs shadow-sm">인정 지각</button>
+                    <button onclick="recordAtt('인정 조퇴')" class="py-3 bg-white text-emerald-600 rounded-xl font-bold text-xs shadow-sm">인정 조퇴</button>
+                    <button onclick="recordAtt('인정 결과')" class="py-3 bg-white text-emerald-600 rounded-xl font-bold text-xs shadow-sm">인정 결과</button>
+                </div>
+            </div>
+            <div class="border-t pt-4 space-y-2">
+                <textarea id="noteText" class="w-full h-24 bg-slate-50 border-0 rounded-2xl p-4 text-sm outline-none shadow-inner" placeholder="특이사항 (진료확인서 등)"></textarea>
+                <div class="flex items-center gap-2">
+                    <input type="file" id="photoFile" accept="image/*" class="hidden" onchange="handleFile(this)">
+                    <button onclick="document.getElementById('photoFile').click()" class="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold text-xs">사진 첨부</button>
+                    <div id="fileStatus" class="text-[10px] text-indigo-600 font-bold"></div>
+                </div>
+            </div>
+            <button onclick="toggleModal('attModal', false)" class="w-full text-slate-400 text-xs text-center">닫기</button>
+        </div>
+    </div>
+
+    <!-- [기록 수정/삭제 모달] -->
+    <div id="editModal" class="modal">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-4 shadow-2xl">
+            <h2 class="font-black text-xl text-center">기록 정정</h2>
+            <textarea id="editNoteText" class="w-full h-32 bg-slate-50 border-0 rounded-2xl p-4 text-sm outline-none shadow-inner"></textarea>
+            <div class="flex gap-2">
+                <button onclick="updateLog()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold">수정 저장</button>
+                <button onclick="deleteLog()" class="flex-1 bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold">기록 삭제</button>
+            </div>
+            <button onclick="toggleModal('editModal', false)" class="w-full text-slate-400 text-xs text-center font-bold">취소</button>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t flex justify-around p-5 shadow-2xl z-50">
+        <button onclick="switchTab(1)" class="nav-btn text-indigo-600 flex flex-col items-center"><i class="fas fa-check-circle text-xl"></i><span class="text-[9px] font-bold mt-1">출결체크</span></button>
+        <button onclick="switchTab(2)" class="nav-btn text-slate-300 flex flex-col items-center"><i class="fas fa-history text-xl"></i><span class="text-[9px] font-bold mt-1">누적/수정</span></button>
     </nav>
 
     <script>
-        let students = JSON.parse(localStorage.getItem('att_students')) || [];
-        let logs = JSON.parse(localStorage.getItem('att_logs')) || [];
+        let students = JSON.parse(localStorage.getItem('att_smart_students')) || [];
+        let logs = JSON.parse(localStorage.getItem('att_smart_logs')) || [];
         let currentStudentId = "";
         let currentFileBase64 = "";
+        let editingLogId = null;
 
-        // 오늘 날짜 기본 세팅
         document.getElementById('currentDate').valueAsDate = new Date();
 
         function toggleModal(id, show) { document.getElementById(id).classList.toggle('active', show); }
 
+        function switchTab(n) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab${n}`).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach((b, i) => b.className = `nav-btn flex flex-col items-center ${i+1===n ? 'text-indigo-600' : 'text-slate-300'}`);
+        }
+
+        // 1. 명단 복붙 스마트 파서
         function importStudents() {
             const raw = document.getElementById('rawList').value.trim();
             if(!raw) return;
+            
             const lines = raw.split('\n');
-            students = lines.map(l => {
-                const p = l.trim().split(/\s+/);
-                return { id: p[0], name: p[1], unpaidCount: 0, sicknessCount: 0, approvedCount: 0 };
+            students = lines.map(line => {
+                // 공백, 탭 등으로 학번과 이름을 분리
+                const parts = line.trim().split(/[\s\t]+/);
+                const id = parts[0];
+                const name = parts.slice(1).join(' ') || "이름없음";
+                return { id, name };
             });
-            save(); toggleModal('setupModal', false);
+            
+            saveData();
+            toggleModal('setupModal', false);
         }
 
         function handleFile(input) {
@@ -168,7 +164,7 @@
             const reader = new FileReader();
             reader.onloadend = () => {
                 currentFileBase64 = reader.result;
-                document.getElementById('filePreview').innerText = "✅ 사진이 첨부되었습니다.";
+                document.getElementById('fileStatus').innerText = "✅ 첨부됨";
             };
             if(file) reader.readAsDataURL(file);
         }
@@ -178,120 +174,111 @@
             currentFileBase64 = "";
             document.getElementById('attModalTitle').innerText = name;
             document.getElementById('noteText').value = "";
-            document.getElementById('filePreview').innerText = "";
+            document.getElementById('fileStatus').innerText = "";
             toggleModal('attModal', true);
         }
 
         function recordAtt(type) {
             const date = document.getElementById('currentDate').value;
             const note = document.getElementById('noteText').value.trim();
-            const student = students.find(s => s.id == currentStudentId);
-
-            // 누적 계산 (미인정/질병/인정 분류)
-            if(type.includes('미인정')) student.unpaidCount++;
-            else if(type.includes('질병')) student.sicknessCount++;
-            else if(type.includes('인정')) student.approvedCount++;
-
+            
             logs.unshift({
-                id: Date.now(),
+                logId: Date.now(),
                 studentId: currentStudentId,
-                name: student.name,
+                name: students.find(s => s.id == currentStudentId).name,
                 date: date,
                 type: type,
                 note: note,
                 photo: currentFileBase64
             });
 
-            save();
+            saveData();
             toggleModal('attModal', false);
         }
 
-        function save() {
-            localStorage.setItem('att_students', JSON.stringify(students));
-            localStorage.setItem('att_logs', JSON.stringify(logs));
-            render();
+        // 2. 기록 수정 및 삭제 로직
+        function openEditModal(logId) {
+            editingLogId = logId;
+            const log = logs.find(l => l.logId === logId);
+            document.getElementById('editNoteText').value = log.note;
+            toggleModal('editModal', true);
         }
 
-        function getLevelClass(count) {
-            if(count >= 9) return 'level-critical';
-            if(count >= 5) return 'level-danger';
-            if(count >= 3) return 'level-warning';
-            return 'level-low';
+        function updateLog() {
+            const log = logs.find(l => l.logId === editingLogId);
+            if(log) {
+                log.note = document.getElementById('editNoteText').value;
+                saveData();
+                toggleModal('editModal', false);
+            }
+        }
+
+        function deleteLog() {
+            if(confirm('정말 삭제하시겠습니까?')) {
+                logs = logs.filter(l => l.logId !== editingLogId);
+                saveData();
+                toggleModal('editModal', false);
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('att_smart_students', JSON.stringify(students));
+            localStorage.setItem('att_smart_logs', JSON.stringify(logs));
+            render();
         }
 
         function render() {
             const date = document.getElementById('currentDate').value;
-            const dailyList = document.getElementById('dailyList');
-            
-            // 오늘 이 날짜의 로그들
             const todaysLogs = logs.filter(l => l.date === date);
-            document.getElementById('statsSummary').innerText = `기록 완료: ${todaysLogs.length}명`;
 
-            dailyList.innerHTML = students.map(s => {
+            // 1. 출결 체크 리스트 렌더링
+            document.getElementById('dailyList').innerHTML = students.map(s => {
                 const log = todaysLogs.find(l => l.studentId === s.id);
-                const level = getLevelClass(s.unpaidCount);
+                // 미인정 횟수 계산 (색상 변경용)
+                const unpaidCount = logs.filter(l => l.studentId === s.id && l.type.includes('미인정')).length;
+                
+                let levelClass = 'level-low';
+                if(unpaidCount >= 9) levelClass = 'level-critical';
+                else if(unpaidCount >= 5) levelClass = 'level-danger';
+                else if(unpaidCount >= 3) levelClass = 'level-warning';
+
                 return `
-                <div class="attendance-card ${level} p-5 rounded-[2rem] shadow-sm flex justify-between items-center">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black">${s.id.slice(-2)}</div>
-                        <div>
-                            <h3 class="font-black text-lg">${s.name}</h3>
-                            <p class="sub-text text-[10px] text-slate-400 font-bold uppercase">미인정 누적: ${s.unpaidCount}회</p>
-                        </div>
+                <div class="bg-white p-5 rounded-[2rem] shadow-sm flex justify-between items-center ${levelClass}">
+                    <div>
+                        <div class="text-[10px] font-black opacity-50">${s.id}</div>
+                        <h3 class="font-black text-lg">${s.name}</h3>
+                        <p class="text-[10px] font-bold mt-1">미인정 누적: <span class="underline">${unpaidCount}회</span></p>
                     </div>
-                    ${log ? 
-                        `<div class="text-right"><span class="bg-indigo-600 text-white px-3 py-1.5 rounded-full text-[10px] font-black">${log.type}</span></div>` : 
-                        `<button onclick="openAttModal('${s.id}', '${s.name}')" class="w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center"><i class="fas fa-plus"></i></button>`
-                    }
+                    <div class="flex gap-2">
+                        ${log ? 
+                            `<span class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg">${log.type}</span>` : 
+                            `<button onclick="openAttModal('${s.id}', '${s.name}')" class="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition"><i class="fas fa-plus"></i></button>`
+                        }
+                    </div>
                 </div>`;
-            }).join('');
+            }).join('') || '<p class="text-center py-20 text-slate-300 font-bold">명단 관리에서 학생을 등록하세요.</p>';
 
-            // 누적 리포트
-            document.getElementById('totalUnpaid').innerText = students.reduce((a,b)=>a+b.unpaidCount, 0);
-            document.getElementById('totalSickness').innerText = students.reduce((a,b)=>a+b.sicknessCount, 0);
-            document.getElementById('totalApproved').innerText = students.reduce((a,b)=>a+b.approvedCount, 0);
-
-            document.getElementById('cumulativeList').innerHTML = students.sort((a,b) => b.unpaidCount - a.unpaidCount).map(s => `
-                <div class="bg-white p-4 rounded-2xl flex items-center justify-between text-xs">
-                    <span class="w-10 font-bold text-slate-400">${s.id}</span>
-                    <span class="w-20 font-black">${s.name}</span>
-                    <div class="flex gap-2 text-[10px] font-bold">
-                        <span class="text-rose-500">미 ${s.unpaidCount}</span>
-                        <span class="text-amber-500">질 ${s.sicknessCount}</span>
-                        <span class="text-emerald-500">인 ${s.approvedCount}</span>
-                    </div>
-                </div>
-            `).join('');
-
-            // 상세 로그
+            // 2. 누적 로그 및 수정 렌더링
             document.getElementById('allLogs').innerHTML = logs.map(l => `
-                <div class="bg-white p-5 rounded-3xl border-l-4 ${l.type.includes('미인정')?'border-rose-500':'border-indigo-400'} shadow-sm space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-black">${l.name} (${l.date})</span>
-                        <span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md">${l.type}</span>
+                <div onclick="openEditModal(${l.logId})" class="bg-white p-5 rounded-3xl border-l-8 ${l.type.includes('미인정')?'border-rose-500':'border-indigo-500'} shadow-sm space-y-1 cursor-pointer active:scale-95 transition">
+                    <div class="flex justify-between items-center text-[10px] font-bold">
+                        <div><span class="text-sm font-black">${l.name}</span> <span class="ml-2 text-slate-400">${l.date}</span></div>
+                        <span class="px-2 py-1 rounded-lg ${l.type.includes('미인정')?'bg-rose-50 text-rose-500':'bg-indigo-50 text-indigo-500'}">${l.type}</span>
                     </div>
-                    ${l.note ? `<p class="text-xs text-slate-600 font-medium bg-slate-50 p-2 rounded-lg">${l.note}</p>` : ''}
-                    ${l.photo ? `<div class="mt-2"><img src="${l.photo}" class="w-full h-32 object-cover rounded-xl border"></div>` : ''}
+                    <p class="text-xs text-slate-600 font-medium">${l.note || '특이사항 없음'}</p>
+                    ${l.photo ? `<div class="mt-2 text-[8px] text-indigo-400 font-bold italic">📷 증빙 사진 첨부됨</div>` : ''}
                 </div>
-            `).join('') || '<p class="py-20 text-center text-slate-300 font-bold">기록이 없습니다.</p>';
+            `).join('') || '<p class="text-center py-20 text-slate-300 font-bold uppercase">NO RECORDS</p>';
         }
-
-        function switchTab(n) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(`tab${n}`).classList.add('active');
-            document.querySelectorAll('.nav-btn').forEach((b, i) => b.className = `nav-btn flex flex-col items-center ${i+1===n ? 'text-indigo-600' : 'text-slate-300'}`);
-        }
-
-        function initDay() { render(); }
 
         function exportCSV() {
-            let csv = "\ufeff학번,이름,날짜,상태,특이사항\n";
+            let csv = "\ufeff학번,이름,날짜,구분,특이사항\n";
             logs.forEach(l => { csv += `${l.studentId},${l.name},${l.date},${l.type},"${l.note}"\n`; });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `곡선중_출결기록_${new Date().toLocaleDateString()}.csv`;
-            link.click();
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `곡선중_출결기록.csv`;
+            a.click();
         }
 
         render();
