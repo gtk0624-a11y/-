@@ -3,47 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>곡선중 출결 스마트 관리</title>
+    <title>곡선중 출결 스마트 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; letter-spacing: -0.02em; }
         
-        /* 파스텔 테마 및 단계별 경고 */
+        /* 5. 누적 횟수별 단계적 파스텔 색상 */
         .level-low { background-color: #FFFFFF; border: 1px solid #F1F5F9; }
-        .level-warning { background-color: #FFFBEB; border: 2.5px solid #FDE68A !important; } /* 3회 */
-        .level-danger { background-color: #FEF2F2; border: 2.5px solid #FECACA !important; }  /* 5회 */
-        .level-critical { background-color: #450a0a; border: 2.5px solid #000000 !important; color: white !important; } /* 9회 */
-        .level-critical p { color: #FCA5A5 !important; }
+        .level-warning { background-color: #FFFBEB; border: 2.5px solid #FDE68A !important; } /* 3회: 노랑 */
+        .level-danger { background-color: #FEF2F2; border: 2.5px solid #FECACA !important; }  /* 5회: 분홍 */
+        .level-critical { background-color: #450a0a; border: 2.5px solid #000000 !important; color: white !important; } /* 9회: 블랙 */
+        .level-critical p, .level-critical span { color: #FCA5A5 !important; }
 
-        /* 모달 레이어 고도화 */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
         .modal.active { display: flex; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
+        /* 버튼 터치 효과 */
+        button:active { transform: scale(0.95); transition: 0.1s; }
     </style>
 </head>
-<body class="bg-slate-50 pb-32 text-slate-800">
+<body class="bg-slate-50 pb-36 text-slate-800">
 
-    <header class="bg-white border-b border-slate-100 p-6 sticky top-0 z-50">
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 p-6 sticky top-0 z-50">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-xl font-black text-slate-900">곡선중 <span class="text-indigo-400">출결관리</span></h1>
-                <input type="date" id="currentDate" onchange="render()" class="text-xs font-bold text-slate-400 bg-transparent border-none outline-none">
+                <h1 class="text-xl font-black text-slate-900 tracking-tighter italic">GOKSUN <span class="text-indigo-400">ATT</span></h1>
+                <input type="date" id="currentDate" onchange="render()" class="text-[11px] font-bold text-slate-400 bg-transparent border-none outline-none">
             </div>
-            <button onclick="toggleModal('setupModal', true)" class="bg-indigo-50 text-indigo-500 px-4 py-2 rounded-2xl text-[11px] font-bold">명단 업로드</button>
+            <button onclick="toggleModal('setupModal', true)" class="bg-indigo-50 text-indigo-500 px-4 py-2 rounded-2xl text-[10px] font-black border border-indigo-100">명단/파일 업로드</button>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 space-y-6">
-        <!-- 탭 1: 체크 리스트 -->
         <div id="tab1" class="tab-content active space-y-3"></div>
-        <!-- 탭 2: 기록 수정 및 로그 -->
         <div id="tab2" class="tab-content space-y-4">
             <div class="flex justify-between items-center px-2">
-                <h2 class="font-black text-slate-800 text-sm">기록 수정 및 상세 로그</h2>
-                <button onclick="exportCSV()" class="text-[10px] font-bold text-slate-400">엑셀 출력</button>
+                <h2 class="font-black text-slate-800 text-sm">출결 로그 및 수정</h2>
+                <button onclick="exportCSV()" class="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-3 py-1.5 rounded-xl">엑셀 출력</button>
             </div>
             <div id="allLogs" class="space-y-3"></div>
         </div>
@@ -52,81 +52,93 @@
     <!-- [명단 설정 모달] -->
     <div id="setupModal" class="modal">
         <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-5 shadow-2xl">
-            <h2 class="font-black text-xl text-center">학생 명단 등록</h2>
+            <div class="text-center"><h2 class="font-black text-xl">학생 명단 등록</h2><p class="text-[10px] text-slate-400 mt-1 italic">텍스트를 붙여넣거나 파일을 드래그하세요.</p></div>
             <div class="rounded-3xl p-6 bg-slate-50 border-2 border-dashed border-slate-200 text-center cursor-pointer" onclick="document.getElementById('fileInput').click()">
-                <p class="text-[10px] font-bold text-slate-400">명단 파일(.txt) 선택 또는 드래그</p>
+                <p class="text-[10px] font-bold text-slate-400">명단 파일(.txt) 선택</p>
                 <input type="file" id="fileInput" accept=".txt" class="hidden" onchange="handleFileUpload(event)">
             </div>
-            <textarea id="rawList" class="w-full h-32 bg-slate-50 border-0 rounded-2xl p-4 text-[11px] outline-none shadow-inner" placeholder="직접 입력: 30201 강민준"></textarea>
+            <textarea id="rawList" class="w-full h-32 bg-slate-50 border-0 rounded-2xl p-4 text-[11px] outline-none shadow-inner" placeholder="학번 성명 (예: 30201 강민준)"></textarea>
             <div class="flex gap-2">
-                <button onclick="importStudents()" class="flex-1 bg-indigo-400 text-white py-4 rounded-2xl font-black">적용</button>
-                <button onclick="if(confirm('데이터를 초기화할까요?')){localStorage.clear(); location.reload();}" class="bg-rose-50 text-rose-400 px-4 rounded-2xl font-bold text-xs">초기화</button>
+                <button onclick="importStudents()" class="flex-1 bg-indigo-400 text-white py-4 rounded-2xl font-black shadow-lg">적용</button>
+                <button onclick="if(confirm('데이터를 초기화할까요?')){localStorage.clear(); location.reload();}" class="bg-rose-50 text-rose-400 px-4 rounded-2xl font-bold text-xs italic text-center">RESET</button>
             </div>
-            <button onclick="toggleModal('setupModal', false)" class="w-full text-slate-300 text-[11px] py-1 text-center">닫기</button>
+            <button onclick="toggleModal('setupModal', false)" class="w-full text-slate-300 text-[11px] py-1 text-center font-bold">닫기</button>
         </div>
     </div>
 
-    <!-- [출결 입력 모달] -->
+    <!-- [출결 입력 모달] - 모든 항목 4종씩 노출 -->
     <div id="attModal" class="modal">
-        <div class="bg-white rounded-[3rem] p-8 w-full max-w-sm space-y-4 shadow-2xl">
-            <h2 id="attModalTitle" class="font-black text-2xl text-center"></h2>
-            <div class="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-                <div>
-                    <p class="text-[10px] font-black text-rose-300 mb-2">미인정</p>
+        <div class="bg-white rounded-[3rem] p-8 w-full max-w-sm space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 id="attModalTitle" class="font-black text-2xl text-center text-slate-800 tracking-tighter"></h2>
+            
+            <div class="space-y-6">
+                <!-- 1. 미인정 -->
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black text-rose-300 ml-1 italic">● UNPAID (미인정)</p>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="recordAtt('미인정 결석')" class="py-3 bg-rose-50 text-rose-500 rounded-xl font-bold text-xs">결석</button>
-                        <button onclick="recordAtt('미인정 지각')" class="py-3 bg-rose-50 text-rose-500 rounded-xl font-bold text-xs">지각</button>
-                        <button onclick="recordAtt('미인정 조퇴')" class="py-3 bg-rose-50 text-rose-500 rounded-xl font-bold text-xs">조퇴</button>
-                        <button onclick="recordAtt('미인정 결과')" class="py-3 bg-rose-50 text-rose-500 rounded-xl font-bold text-xs">결과</button>
+                        <button onclick="recordAtt('미인정 결석')" class="py-3.5 bg-rose-50 text-rose-500 rounded-2xl font-black text-[11px] border border-rose-100/50">결석</button>
+                        <button onclick="recordAtt('미인정 지각')" class="py-3.5 bg-rose-50 text-rose-500 rounded-2xl font-black text-[11px] border border-rose-100/50">지각</button>
+                        <button onclick="recordAtt('미인정 조퇴')" class="py-3.5 bg-rose-50 text-rose-500 rounded-2xl font-black text-[11px] border border-rose-100/50">조퇴</button>
+                        <button onclick="recordAtt('미인정 결과')" class="py-3.5 bg-rose-50 text-rose-500 rounded-2xl font-black text-[11px] border border-rose-100/50">결과</button>
                     </div>
                 </div>
-                <div>
-                    <p class="text-[10px] font-black text-amber-300 mb-2">질병/인정</p>
+
+                <!-- 2. 질병 -->
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black text-amber-300 ml-1 italic">● SICK (질병)</p>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="recordAtt('질병 결석')" class="py-3 bg-amber-50 text-amber-500 rounded-xl font-bold text-xs">질병 결석</button>
-                        <button onclick="recordAtt('인정 결석')" class="py-3 bg-emerald-50 text-emerald-500 rounded-xl font-bold text-xs">인정 결석</button>
+                        <button onclick="recordAtt('질병 결석')" class="py-3 bg-amber-50 text-amber-500 rounded-2xl font-black text-[11px] border border-amber-100/50">질병 결석</button>
+                        <button onclick="recordAtt('질병 지각')" class="py-3 bg-amber-50 text-amber-500 rounded-2xl font-black text-[11px] border border-amber-100/50">질병 지각</button>
+                        <button onclick="recordAtt('질병 조퇴')" class="py-3 bg-amber-50 text-amber-500 rounded-2xl font-black text-[11px] border border-amber-100/50">질병 조퇴</button>
+                        <button onclick="recordAtt('질병 결과')" class="py-3 bg-amber-50 text-amber-500 rounded-2xl font-black text-[11px] border border-amber-100/50">질병 결과</button>
+                    </div>
+                </div>
+
+                <!-- 3. 인정 -->
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black text-emerald-300 ml-1 italic">● OFFICIAL (인정)</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="recordAtt('인정 결석')" class="py-3 bg-emerald-50 text-emerald-500 rounded-2xl font-black text-[11px] border border-emerald-100/50">인정 결석</button>
+                        <button onclick="recordAtt('인정 지각')" class="py-3 bg-emerald-50 text-emerald-500 rounded-2xl font-black text-[11px] border border-emerald-100/50">인정 지각</button>
+                        <button onclick="recordAtt('인정 조퇴')" class="py-3 bg-emerald-50 text-emerald-500 rounded-2xl font-black text-[11px] border border-emerald-100/50">인정 조퇴</button>
+                        <button onclick="recordAtt('인정 결과')" class="py-3 bg-emerald-50 text-emerald-500 rounded-2xl font-black text-[11px] border border-emerald-100/50">인정 결과</button>
                     </div>
                 </div>
             </div>
-            <textarea id="noteText" class="w-full h-20 bg-slate-50 rounded-2xl p-4 text-xs outline-none" placeholder="특이사항 기록 (사진은 자동 저장되지 않음)"></textarea>
-            <button onclick="toggleModal('attModal', false)" class="w-full py-2 text-slate-300 text-xs font-bold">닫기</button>
+
+            <textarea id="noteText" class="w-full h-20 bg-slate-50 rounded-2xl p-4 text-xs outline-none shadow-inner" placeholder="특이사항 (병원명 등)"></textarea>
+            <button onclick="toggleModal('attModal', false)" class="w-full py-1 text-slate-300 text-[10px] font-bold text-center">닫기</button>
         </div>
     </div>
 
-    <!-- [기록 정정 모달 - 핵심] -->
+    <!-- [기록 정정 모달] -->
     <div id="editLogModal" class="modal">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-5 shadow-2xl">
-            <div class="text-center">
-                <h2 class="font-black text-xl">기록 정정</h2>
-                <p id="editInfo" class="text-[10px] font-bold text-indigo-400 mt-1"></p>
-            </div>
-            <textarea id="editLogText" class="w-full h-32 bg-slate-50 border-0 rounded-2xl p-4 text-xs outline-none shadow-inner" placeholder="수정할 내용을 입력하세요."></textarea>
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm space-y-4 shadow-2xl">
+            <h2 class="font-black text-xl text-center text-slate-800 italic">EDIT LOG</h2>
+            <div id="editInfo" class="text-[10px] text-center font-black text-indigo-400 bg-indigo-50/50 py-2 rounded-xl"></div>
+            <textarea id="editLogText" class="w-full h-32 bg-slate-50 border-0 rounded-2xl p-4 text-xs outline-none shadow-inner"></textarea>
             <div class="flex gap-2">
-                <button onclick="confirmUpdate()" class="flex-1 bg-indigo-400 text-white py-4 rounded-2xl font-black">수정 저장</button>
-                <button onclick="confirmDelete()" class="flex-1 bg-rose-50 text-rose-400 py-4 rounded-2xl font-bold text-xs">삭제</button>
+                <button onclick="confirmUpdate()" class="flex-1 bg-indigo-400 text-white py-4 rounded-2xl font-black shadow-lg">수정 저장</button>
+                <button onclick="confirmDelete()" class="flex-1 bg-rose-50 text-rose-400 py-4 rounded-2xl font-bold text-xs italic">DELETE</button>
             </div>
-            <button onclick="toggleModal('editLogModal', false)" class="w-full text-slate-300 text-xs py-1 text-center font-bold">취소</button>
+            <button onclick="toggleModal('editLogModal', false)" class="w-full text-slate-300 text-[10px] py-1 text-center font-bold">취소</button>
         </div>
     </div>
 
-    <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-2xl border border-white/50 flex gap-10 px-10 py-5 rounded-[2.5rem] shadow-2xl z-50">
-        <button onclick="switchTab(1)" class="nav-btn text-indigo-400 flex flex-col items-center"><i class="fas fa-check-circle text-lg"></i><span class="text-[9px] font-black mt-1 uppercase">Today</span></button>
-        <button onclick="switchTab(2)" class="nav-btn text-slate-300 flex flex-col items-center"><i class="fas fa-history text-lg"></i><span class="text-[9px] font-black mt-1 uppercase">History</span></button>
+    <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/70 backdrop-blur-2xl border border-white/50 flex gap-12 px-12 py-5 rounded-[2.5rem] shadow-2xl z-50">
+        <button onclick="switchTab(1)" class="nav-btn text-indigo-400 flex flex-col items-center"><i class="fas fa-calendar-check text-xl"></i><span class="text-[9px] font-black mt-1 uppercase">Today</span></button>
+        <button onclick="switchTab(2)" class="nav-btn text-slate-300 flex flex-col items-center"><i class="fas fa-history text-xl"></i><span class="text-[9px] font-black mt-1 uppercase">Logs</span></button>
     </nav>
 
     <script>
-        let students = JSON.parse(localStorage.getItem('att_v5_students')) || [];
-        let logs = JSON.parse(localStorage.getItem('att_v5_logs')) || [];
+        let students = JSON.parse(localStorage.getItem('att_final_students')) || [];
+        let logs = JSON.parse(localStorage.getItem('att_final_logs')) || [];
         let currentStudentId = "";
         let editingLogId = null;
 
         document.getElementById('currentDate').valueAsDate = new Date();
 
-        function toggleModal(id, show) { 
-            const modal = document.getElementById(id);
-            if(show) modal.classList.add('active');
-            else modal.classList.remove('active');
-        }
+        function toggleModal(id, show) { document.getElementById(id).classList.toggle('active', show); }
 
         function switchTab(n) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -162,7 +174,7 @@
         function recordAtt(type) {
             const date = document.getElementById('currentDate').value;
             logs.unshift({
-                logId: Date.now(), // 고유 ID 생성
+                logId: Date.now(),
                 studentId: currentStudentId,
                 name: students.find(s => s.id == currentStudentId).name,
                 date: date,
@@ -172,45 +184,37 @@
             save(); toggleModal('attModal', false);
         }
 
-        // --- 수정/삭제 핵심 함수 ---
         function openEditLog(logId) {
             editingLogId = logId;
             const log = logs.find(l => l.logId === logId);
             if(!log) return;
-            
-            document.getElementById('editInfo').innerText = `${log.name} (${log.date}) - ${log.type}`;
+            document.getElementById('editInfo').innerText = `${log.name} (${log.date}) / ${log.type}`;
             document.getElementById('editLogText').value = log.note;
             toggleModal('editLogModal', true);
         }
 
         function confirmUpdate() {
             const log = logs.find(l => l.logId === editingLogId);
-            if(log) {
-                log.note = document.getElementById('editLogText').value.trim();
-                save();
-                toggleModal('editLogModal', false);
-            }
+            if(log) { log.note = document.getElementById('editLogText').value.trim(); save(); toggleModal('editLogModal', false); }
         }
 
         function confirmDelete() {
-            if(confirm('이 기록을 영구 삭제하시겠습니까?')) {
+            if(confirm('기록을 완전히 삭제하시겠습니까?')) {
                 logs = logs.filter(l => l.logId !== editingLogId);
-                save();
-                toggleModal('editLogModal', false);
+                save(); toggleModal('editLogModal', false);
             }
         }
 
         function save() {
-            localStorage.setItem('att_v5_students', JSON.stringify(students));
-            localStorage.setItem('att_v5_logs', JSON.stringify(logs));
+            localStorage.setItem('att_final_students', JSON.stringify(students));
+            localStorage.setItem('att_final_logs', JSON.stringify(logs));
             render();
         }
 
         function render() {
-            const date = document.getElementById('currentDate').value;
+            const date = document.getElementById('currentDate').value || new Date().toISOString().split('T')[0];
             const todaysLogs = logs.filter(l => l.date === date);
 
-            // 1. 체크 리스트 렌더링
             document.getElementById('tab1').innerHTML = students.map(s => {
                 const log = todaysLogs.find(l => l.studentId === s.id);
                 const unpaidCount = logs.filter(l => l.studentId === s.id && l.type.includes('미인정')).length;
@@ -224,25 +228,24 @@
                     <div>
                         <p class="text-[9px] font-black opacity-30">${s.id}</p>
                         <h3 class="font-black text-lg">${s.name}</h3>
-                        <p class="text-[10px] font-bold text-slate-400 mt-1 underline">미인정: ${unpaidCount}회</p>
+                        <p class="text-[10px] font-bold text-slate-400 mt-1 italic underline">미인정 누적: ${unpaidCount}회</p>
                     </div>
                     ${log ? 
-                        `<button onclick="openEditLog(${log.logId})" class="bg-indigo-400 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-lg">${log.type}</button>` : 
-                        `<button onclick="openAttModal('${s.id}', '${s.name}')" class="w-12 h-12 bg-slate-800 text-white rounded-2xl flex items-center justify-center shadow-lg"><i class="fas fa-plus"></i></button>`
+                        `<button onclick="openEditLog(${log.logId})" class="bg-indigo-400 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-lg shadow-indigo-100">${log.type}</button>` : 
+                        `<button onclick="openAttModal('${s.id}', '${s.name}')" class="w-12 h-12 bg-slate-800 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition"><i class="fas fa-plus"></i></button>`
                     }
                 </div>`;
             }).join('') || '<div class="text-center py-20 opacity-20 font-black">명단을 등록하세요</div>';
 
-            // 2. 전체 로그 렌더링
             document.getElementById('allLogs').innerHTML = logs.map(l => `
-                <div onclick="openEditLog(${l.logId})" class="bg-white p-5 rounded-[2rem] border-l-8 ${l.type.includes('미인정')?'border-rose-200':'border-indigo-100'} shadow-sm space-y-1 cursor-pointer">
+                <div onclick="openEditLog(${l.logId})" class="bg-white p-5 rounded-[2rem] border-l-8 ${l.type.includes('미인정')?'border-rose-200':l.type.includes('질병')?'border-amber-200':'border-emerald-200'} shadow-sm space-y-1 cursor-pointer">
                     <div class="flex justify-between items-center text-[10px] font-black">
                         <span>${l.name} <span class="text-slate-300 ml-2 font-bold">${l.date}</span></span>
-                        <span class="px-2 py-1 rounded-lg ${l.type.includes('미인정')?'bg-rose-50 text-rose-400':'bg-indigo-50 text-indigo-400'}">${l.type}</span>
+                        <span class="px-2 py-1 rounded-lg ${l.type.includes('미인정')?'bg-rose-50 text-rose-400':l.type.includes('질병')?'bg-amber-50 text-amber-400':'bg-emerald-50 text-emerald-400'}">${l.type}</span>
                     </div>
                     <p class="text-[11px] text-slate-500 font-medium">${l.note || '특이사항 없음 (터치하여 수정)'}</p>
                 </div>
-            `).join('') || '<div class="text-center py-20 opacity-20 font-black">기록이 없습니다</div>';
+            `).join('') || '<div class="text-center py-20 opacity-20 font-black">로그가 비어있습니다</div>';
         }
 
         function exportCSV() {
